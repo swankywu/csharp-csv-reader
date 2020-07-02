@@ -12,6 +12,7 @@ using System.Data;
 #endif
 using System.Reflection;
 using System.ComponentModel;
+using System.Collections;
 
 namespace CSVFile
 {
@@ -84,7 +85,8 @@ namespace CSVFile
                 string[] line = NextLine();
 
                 // If we were unable to parse the line successfully, that's all the file has
-                if (line == null) break;
+                if (line == null)
+                    break;
 
                 // We got something - give the caller an object
                 yield return line;
@@ -264,12 +266,22 @@ namespace CSVFile
                     }
                     else if (CSV.custom_importers_table.ContainsKey(column_types[i])) //--add by swanky, use custom importer
                     {
-                        value = CSV.custom_importers_table[column_types[i]](line[i]);
+                        value = CSV.custom_importers_table[column_types[i]](line[i], column_types[i]);
                     }
                     else if (column_convert[i] != null && column_convert[i].IsValid(line[i]))
                     {
                         value = column_convert[i].ConvertFromString(line[i]);
                     }
+                    //--add by swanky
+                    else if (typeof(ICollection).IsAssignableFrom(column_types[i]))
+                    {
+                        var typeColl = typeof(ICollection);
+                        if (CSV.custom_importers_table.ContainsKey(typeColl))
+                        {
+                            value = CSV.custom_importers_table[typeColl](line[i], column_types[i]);
+                        }
+                    }
+                    //--
                     else if (!_settings.IgnoreHeaderErrors)
                     {
                         throw new Exception(String.Format("The value '{0}' cannot be converted to the type {1}.", line[i], column_types[i]));

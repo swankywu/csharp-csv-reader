@@ -27,6 +27,11 @@ namespace CSVFile
             IgnoreDimensionErrors = true;
             AssumedHeaders = null;
             HeaderRowIncluded = true;
+
+            //--add by swanky
+            IgnoreCommentLine = true;
+            IgnoreCommentChar = '#';
+            //--
         }
 
         /// <summary>
@@ -81,6 +86,21 @@ namespace CSVFile
         /// </summary>
         public bool IgnoreHeaderErrors { get; set; }
 
+        //--add by swanky
+        /// <summary>
+        /// Get or set to ditermine if ignore a comment line;
+        /// </summary>
+        /// <value></value>
+        public bool IgnoreCommentLine { get; set; }
+
+        /// <summary>
+        ///  Get or set to use ignore  a comment line
+        /// </summary>
+        /// <value></value>
+        public char IgnoreCommentChar { get; set; }
+
+        //--
+
         /// <summary>
         /// Standard comma-separated value (CSV) file settings
         /// </summary>
@@ -98,7 +118,8 @@ namespace CSVFile
         /// <summary>
         /// Standard tab-separated value (TSV) file settings
         /// </summary>
-        public static readonly CSVSettings TSV = new CSVSettings() { 
+        public static readonly CSVSettings TSV = new CSVSettings()
+        {
             FieldDelimiter = '\t'
         };
     }

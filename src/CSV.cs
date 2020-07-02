@@ -4,6 +4,7 @@
  * Home page: https://github.com/tspence/csharp-csv-reader
  */
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
@@ -85,8 +86,21 @@ namespace CSVFile
                 // Read in a line
                 sb.Append(inStream.ReadLine());
 
+
                 // Does it parse?
                 string s = sb.ToString();
+
+                //--add by swanky ignore lines
+                if (settings.IgnoreCommentLine)
+                {
+                    if (s[0] == settings.IgnoreCommentChar)
+                    {
+                        sb.Clear();
+                        continue;
+                    }
+                }
+                //
+
                 if (TryParseLine(s, out array, settings))
                 {
                     return array;
@@ -125,6 +139,17 @@ namespace CSVFile
         {
             // Ensure settings are non-null
             if (settings == null) settings = CSVSettings.CSV;
+
+            //--add by swanky ignore lines
+            if (settings.IgnoreCommentLine)
+            {
+                if (line[0] == settings.IgnoreCommentChar)
+                {
+                    row = null;
+                    return false;
+                }
+            }
+            //
 
             // Okay, let's begin parsing
             List<string> list = new List<string>();
@@ -390,6 +415,18 @@ namespace CSVFile
                 {
                     s = custom_exporters_table[oType](o);
                 }
+                else if (o is ICollection)
+                {
+                    var enumType = typeof(ICollection);
+                    if (custom_exporters_table.ContainsKey(enumType))
+                    {
+                        s = custom_exporters_table[enumType](o);
+                    }
+                    else
+                    {
+                        s = "(CAN NOT PARSE)";
+                    }
+                }
                 else
                 {
                     s = o.ToString();
@@ -444,9 +481,9 @@ namespace CSVFile
             ImporterFunc<TResult> importer)
         {
             ImporterFunc importer_wrapper =
-                delegate (string input)
+                delegate (string input, Type type)
                 {
-                    return importer(input);
+                    return importer(input, type);
                 };
 
             custom_importers_table.Add(typeof(TResult), importer_wrapper);
@@ -456,8 +493,8 @@ namespace CSVFile
     internal delegate string ExporterFunc(object obj);
     public delegate string ExporterFunc<T>(T obj);
 
-    internal delegate object ImporterFunc(string input);
-    public delegate TResult ImporterFunc<TResult>(string input);
+    internal delegate object ImporterFunc(string input, Type type);
+    public delegate TResult ImporterFunc<TResult>(string input, Type type);
     //--
 
 }
