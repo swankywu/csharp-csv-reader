@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 
 #if NEEDS_EXTENSION_ATTRIBUTE
@@ -61,7 +62,14 @@ namespace CSVFile
         public const char DEFAULT_TSV_QUALIFIER = '"';
 
 
-#region Methods to read CSV data
+        //add by swanky
+        //used to execute custom serialization policy
+        internal static BindingFlags BindingFlags = BindingFlags.Public | BindingFlags.Instance;
+        internal static Func<MemberInfo, bool> SerializationPolicy = (m) => true;
+        //--
+
+
+        #region Methods to read CSV data
         /// <summary>
         /// Parse a single row of data from a CSV line into an array of objects, while permitting embedded newlines
         /// </summary>
@@ -228,9 +236,9 @@ namespace CSVFile
                 }
             }
         }
-#endregion
+        #endregion
 
-#region CSV Output Functions
+        #region CSV Output Functions
         /// <summary>
         /// Serialize a sequence of objects into a CSV string
         /// </summary>
@@ -268,7 +276,7 @@ namespace CSVFile
 
             // Let's go through the array of objects
             // Iterate through all the objects
-            var values = new List<object>();
+            // var values = new List<object>();
             foreach (T obj in list)
             {
                 sb.AppendAsCSV<T>(obj, settings);
@@ -278,9 +286,9 @@ namespace CSVFile
             // Here's your data serialized in CSV format
             return sb.ToString();
         }
-#endregion
+        #endregion
 
-#region StringBuilder append functions
+        #region StringBuilder append functions
         /// <summary>
         /// Add a CSV Header line to a StringBuilder
         /// </summary>
@@ -293,18 +301,20 @@ namespace CSVFile
             if (settings == null) settings = CSVSettings.CSV;
 
             // Retrieve reflection information
-            var filist = type.GetFields();
+            var filist = type.GetFields(BindingFlags);
             var pilist = type.GetProperties();
 
             // Gather information about headers
             var headers = new List<object>();
             foreach (var fi in filist)
             {
-                headers.Add(fi.Name);
+                if (SerializationPolicy(fi))
+                    headers.Add(fi.Name);
             }
             foreach (var pi in pilist)
             {
-                headers.Add(pi.Name);
+                if (SerializationPolicy(pi))
+                    headers.Add(pi.Name);
             }
             AppendCSVRow(sb, headers, settings);
         }
@@ -326,18 +336,20 @@ namespace CSVFile
 
             // Retrieve reflection information
             var type = typeof(T);
-            var filist = type.GetFields();
+            var filist = type.GetFields(BindingFlags);
             var pilist = type.GetProperties();
 
             // Retrieve all the fields and properties
             List<object> values = new List<object>();
             foreach (var fi in filist)
             {
-                values.Add(fi.GetValue(obj));
+                if (SerializationPolicy(fi))
+                    values.Add(fi.GetValue(obj));
             }
             foreach (var pi in pilist)
             {
-                values.Add(pi.GetValue(obj, null));
+                if (SerializationPolicy(pi))
+                    values.Add(pi.GetValue(obj, null));
             }
 
             // Output one line of CSV
@@ -371,7 +383,19 @@ namespace CSVFile
                 }
 
                 // Okay, let's handle this value normally
-                string s = o.ToString();
+                //--add by swanky
+                var oType = o.GetType();
+                string s;
+                if (custom_exporters_table.ContainsKey(oType))
+                {
+                    s = custom_exporters_table[oType](o);
+                }
+                else
+                {
+                    s = o.ToString();
+                }
+                //--
+                // string s = o.ToString();
                 if (s.Length > 0)
                 {
 
@@ -397,6 +421,43 @@ namespace CSVFile
             // Subtract the trailing delimiter so we don't inadvertently add an empty column at the end
             sb.Length -= 1;
         }
-#endregion
+        #endregion
+
+        //--add by swanky exporter/importer
+        internal static readonly
+              IDictionary<Type, ImporterFunc> custom_importers_table = new Dictionary<Type, ImporterFunc>();
+        internal static readonly
+              IDictionary<Type, ExporterFunc> custom_exporters_table = new Dictionary<Type, ExporterFunc>();
+
+        public static void RegisterExporter<T>(ExporterFunc<T> exporter)
+        {
+            ExporterFunc exporter_wrapper =
+                delegate (object obj)
+                {
+                    return exporter((T)obj);
+                };
+
+            custom_exporters_table[typeof(T)] = exporter_wrapper;
+        }
+
+        public static void RegisterImporter<TResult>(
+            ImporterFunc<TResult> importer)
+        {
+            ImporterFunc importer_wrapper =
+                delegate (string input)
+                {
+                    return importer(input);
+                };
+
+            custom_importers_table.Add(typeof(TResult), importer_wrapper);
+        }//--
     }
+    //--add by swanky exporter/importer
+    internal delegate string ExporterFunc(object obj);
+    public delegate string ExporterFunc<T>(T obj);
+
+    internal delegate object ImporterFunc(string input);
+    public delegate TResult ImporterFunc<TResult>(string input);
+    //--
+
 }

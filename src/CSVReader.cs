@@ -101,7 +101,7 @@ namespace CSVFile
         }
         #endregion
 
-#region Read a file into a data table
+        #region Read a file into a data table
 #if HAS_DATATABLE
         /// <summary>
         /// Read this file into a data table in memory
@@ -192,7 +192,7 @@ namespace CSVFile
                 // If we failed to get a property handler, let's try a field handler
                 if (prop_handlers[i] == null)
                 {
-                    field_handlers[i] = return_type.GetField(Headers[i]);
+                    field_handlers[i] = return_type.GetField(Headers[i], CSV.BindingFlags);
 
                     // If we failed to get a field handler, let's try a method
                     if (field_handlers[i] == null)
@@ -246,7 +246,8 @@ namespace CSVFile
             {
 
                 // Does this line match the length of the first line?  Does the caller want us to complain?
-                if ((line.Length != num_columns) && !_settings.IgnoreHeaderErrors) {
+                if ((line.Length != num_columns) && !_settings.IgnoreHeaderErrors)
+                {
                     throw new Exception($"Line #{row_num} contains {line.Length} columns; expected {num_columns}");
                 }
 
@@ -260,7 +261,11 @@ namespace CSVFile
                     if (_settings.AllowNull && (line[i] == null))
                     {
                         value = null;
-                    } 
+                    }
+                    else if (CSV.custom_importers_table.ContainsKey(column_types[i])) //--add by swanky, use custom importer
+                    {
+                        value = CSV.custom_importers_table[column_types[i]](line[i]);
+                    }
                     else if (column_convert[i] != null && column_convert[i].IsValid(line[i]))
                     {
                         value = column_convert[i].ConvertFromString(line[i]);
@@ -297,9 +302,9 @@ namespace CSVFile
             // Here's your array!
             return result;
         }
-#endregion
+        #endregion
 
-#region Disposal
+        #region Disposal
         /// <summary>
         /// Close our resources - specifically, the stream reader
         /// </summary>
@@ -307,9 +312,9 @@ namespace CSVFile
         {
             _instream.Dispose();
         }
-#endregion
+        #endregion
 
-#region Chopping a CSV file into chunks
+        #region Chopping a CSV file into chunks
         /// <summary>
         /// Take a CSV file and chop it into multiple chunks of a specified maximum size.
         /// </summary>
@@ -377,6 +382,6 @@ namespace CSVFile
             }
             return file_id;
         }
-#endregion
+        #endregion
     }
 }
