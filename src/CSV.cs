@@ -346,10 +346,10 @@ namespace CSVFile
                 foreach (var item in members)
                 {
                     headers.Add(item.Name);
+
                 }
                 s_HeaderData.Add(type, headers);
             }
-
             AppendCSVRow(sb, headers, settings);
         }
 
@@ -440,7 +440,7 @@ namespace CSVFile
                 }
                 //--
                 // string s = o.ToString();
-                if (s.Length > 0)
+                if (s != null && s.Length > 0)
                 {
 
                     // Does this string contain any risky characters?  Risky is defined as delim, qual, or newline
@@ -510,52 +510,58 @@ namespace CSVFile
             else
             {
                 List<MemberInfo> members = new List<MemberInfo>();
+
                 int quantity = 0;
                 int level = 0;
                 var originalType = type;
-                while (type != null && type != typeof(System.Object))
+                using (NBGame.Utility.Pool.StringList.Get(out List<string> names))
                 {
-                    // Retrieve reflection information
-                    var filist = type.GetFields(BindingFlags);
-                    var pilist = type.GetProperties();
 
-                    for (int i = filist.Length - 1; i >= 0; i--)
+                    while (type != null && type != typeof(System.Object))
                     {
+                        // Retrieve reflection information
+                        var filist = type.GetFields(BindingFlags);
+                        var pilist = type.GetProperties();
 
-                        var fi = filist[i];
-                        if (SerializationPolicy(fi))
+                        for (int i = pilist.Length - 1; i >= 0; i--)
                         {
-                            if (quantity > 0)
+                            var pi = pilist[i];
+                            if (!names.Contains(pi.Name) && SerializationPolicy(pi))
                             {
-                                members.Insert(0, fi);
+                                if (quantity > 0)
+                                {
+                                    members.Insert(0, pi);
+                                }
+                                else
+                                {
+                                    members.Add(pi);
+                                }
+                                names.Add(pi.Name);
+                                ++quantity;
                             }
-                            else
-                            {
-                                members.Add(fi);
-                            }
-                            ++quantity;
                         }
-                    }
-                    for (int i = pilist.Length - 1; i >= 0; i--)
-                    {
-
-                        var pi = pilist[i];
-                        if (SerializationPolicy(pi))
+                        for (int i = filist.Length - 1; i >= 0; i--)
                         {
-                            if (quantity > 0)
-                            {
-                                members.Insert(0, pi);
-                            }
-                            else
-                            {
-                                members.Add(pi);
-                            }
-                            ++quantity;
-                        }
-                    }
 
-                    type = type.BaseType;
-                    ++level;
+                            var fi = filist[i];
+                            if (!names.Contains(fi.Name) && SerializationPolicy(fi))
+                            {
+                                if (quantity > 0)
+                                {
+                                    members.Insert(0, fi);
+                                }
+                                else
+                                {
+                                    members.Add(fi);
+                                }
+                                names.Add(fi.Name);
+                                ++quantity;
+                            }
+                        }
+
+                        type = type.BaseType;
+                        ++level;
+                    }
                 }
 
                 s_TypeData.Add(originalType, members);
