@@ -93,6 +93,7 @@ namespace CSVFile
                 //--add by swanky ignore lines
                 if (settings.IgnoreCommentLine)
                 {
+                    //ignore empty line or line starts with "#"
                     if (string.IsNullOrWhiteSpace(s) || s[0] == settings.IgnoreCommentChar)
                     {
                         sb.Clear();
@@ -314,6 +315,7 @@ namespace CSVFile
         #endregion
 
         #region StringBuilder append functions
+        private static Dictionary<Type, List<object>> s_HeaderData;
         /// <summary>
         /// Add a CSV Header line to a StringBuilder
         /// </summary>
@@ -326,24 +328,21 @@ namespace CSVFile
             if (settings == null) settings = CSVSettings.CSV;
 
             // Gather information about headers
-            var headers = new List<object>();
-            while (type != null && type != typeof(System.Object))
+            if (s_HeaderData == null)
             {
-                // Retrieve reflection information
-                var filist = type.GetFields(BindingFlags);
-                var pilist = type.GetProperties();
+                s_HeaderData = new Dictionary<Type, List<object>>();
+            }
 
-                foreach (var fi in filist)
+            List<object> headers;
+            if (!s_HeaderData.TryGetValue(type, out headers))
+            {
+                headers = new List<object>();
+                var members = GetMembers(type);
+                foreach (var item in members)
                 {
-                    if (SerializationPolicy(fi))
-                        headers.Add(fi.Name);
+                    headers.Add(item.Name);
                 }
-                foreach (var pi in pilist)
-                {
-                    if (SerializationPolicy(pi))
-                        headers.Add(pi.Name);
-                }
-                type = type.BaseType;
+                s_HeaderData.Add(type, headers);
             }
 
             AppendCSVRow(sb, headers, settings);
@@ -368,23 +367,18 @@ namespace CSVFile
             var type = typeof(T);
             // Retrieve all the fields and properties
             List<object> values = new List<object>();
-            while (type != null && type != typeof(System.Object))
+            var members = GetMembers(type);
+            foreach (var item in members)
             {
-                var filist = type.GetFields(BindingFlags);
-                var pilist = type.GetProperties();
-                foreach (var fi in filist)
+                if (item is FieldInfo field)
                 {
-                    if (SerializationPolicy(fi))
-                        values.Add(fi.GetValue(obj));
+                    values.Add(field.GetValue(obj));
                 }
-                foreach (var pi in pilist)
+                else if (item is PropertyInfo property)
                 {
-                    if (SerializationPolicy(pi))
-                        values.Add(pi.GetValue(obj, null));
+                    values.Add(property.GetValue(obj));
                 }
-                type = type.BaseType;
             }
-
             // Output one line of CSV
             AppendCSVRow(sb, values, settings);
         }
@@ -496,6 +490,74 @@ namespace CSVFile
 
             custom_importers_table.Add(typeof(TResult), importer_wrapper);
         }//--
+
+        //--added by swanky, start to type field cache
+        private static Dictionary<Type, List<MemberInfo>> s_TypeData;
+        private static List<MemberInfo> GetMembers(Type type)
+        {
+            if (s_TypeData == null)
+                s_TypeData = new Dictionary<Type, List<MemberInfo>>();
+
+            if (s_TypeData.TryGetValue(type, out List<MemberInfo> list))
+            {
+                return list;
+            }
+            else
+            {
+                List<MemberInfo> members = new List<MemberInfo>();
+                int quantity = 0;
+                int level = 0;
+                var originalType = type;
+                while (type != null && type != typeof(System.Object))
+                {
+                    // Retrieve reflection information
+                    var filist = type.GetFields(BindingFlags);
+                    var pilist = type.GetProperties();
+
+                    for (int i = filist.Length - 1; i >= 0; i--)
+                    {
+
+                        var fi = filist[i];
+                        if (SerializationPolicy(fi))
+                        {
+                            if (quantity > 0)
+                            {
+                                members.Insert(0, fi);
+                            }
+                            else
+                            {
+                                members.Add(fi);
+                            }
+                            ++quantity;
+                        }
+                    }
+                    for (int i = pilist.Length - 1; i >= 0; i--)
+                    {
+
+                        var pi = pilist[i];
+                        if (SerializationPolicy(pi))
+                        {
+                            if (quantity > 0)
+                            {
+                                members.Insert(0, pi);
+                            }
+                            else
+                            {
+                                members.Add(pi);
+                            }
+                            ++quantity;
+                        }
+                    }
+
+                    type = type.BaseType;
+                    ++level;
+                }
+
+                s_TypeData.Add(originalType, members);
+                return members;
+
+            }
+        }
     }
     //--add by swanky exporter/importer
     internal delegate string ExporterFunc(object obj);
