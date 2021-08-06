@@ -278,6 +278,11 @@ namespace CSVFile
             return sb.ToString();
         }
 
+
+        public static string Serialize<T>(IEnumerable<T> list, CSVSettings settings = null) where T : class, new()
+        {
+            return SerializeAny(list, settings);
+        }
         /// <summary>
         /// Serialize an array of objects to CSV format
         /// </summary>
@@ -285,7 +290,7 @@ namespace CSVFile
         /// <param name="list">The array of objects to serialize</param>
         /// <param name="settings">The CSV settings to use when exporting this array (Default: CSV)</param>
         /// <returns>The completed CSV string representing one line per element in list</returns>
-        public static string Serialize<T>(IEnumerable<T> list, CSVSettings settings = null) where T : class, new()
+        public static string SerializeAny(IEnumerable list, CSVSettings settings = null)
         {
             // Use CSV as default.
             if (settings == null) settings = CSVSettings.CSV;
@@ -296,16 +301,16 @@ namespace CSVFile
             // Did the caller want the header row?
             if (settings.HeaderRowIncluded)
             {
-                sb.AppendCSVHeader(typeof(T), settings);
+                sb.AppendCSVHeader(NBGame.Utility.Types.GetAnyElementType(list.GetType()), settings);
                 sb.Append(settings.LineSeparator);
             }
 
             // Let's go through the array of objects
             // Iterate through all the objects
             // var values = new List<object>();
-            foreach (T obj in list)
+            foreach (var obj in list)
             {
-                sb.AppendAsCSV<T>(obj, settings);
+                sb.AppendAsCSV(obj, settings);
                 sb.Append(settings.LineSeparator);
             }
 
@@ -355,7 +360,7 @@ namespace CSVFile
         /// <param name="obj">The single object to append in CSV-line format</param>
         /// <param name="settings">The CSV settings to use when exporting this array (Default: CSV)</param>
         /// <typeparam name="T">The 1st type parameter.</typeparam>
-        public static void AppendAsCSV<T>(this StringBuilder sb, T obj, CSVSettings settings = null) where T : class, new()
+        public static void AppendAsCSV(this StringBuilder sb, object obj, CSVSettings settings = null)
         {
             // Skip any null objects
             if (obj == null) return;
@@ -364,7 +369,7 @@ namespace CSVFile
             if (settings == null) settings = CSVSettings.CSV;
 
             // Retrieve reflection information
-            var type = typeof(T);
+            var type = obj.GetType();
             // Retrieve all the fields and properties
             List<object> values = new List<object>();
             var members = GetMembers(type);
