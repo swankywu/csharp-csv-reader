@@ -93,7 +93,7 @@ namespace CSVFile
                 //--add by swanky ignore lines
                 if (settings.IgnoreCommentLine)
                 {
-                    if (s[0] == settings.IgnoreCommentChar)
+                    if (string.IsNullOrWhiteSpace(s) || s[0] == settings.IgnoreCommentChar)
                     {
                         sb.Clear();
                         continue;
@@ -325,22 +325,27 @@ namespace CSVFile
             // Use CSV as default.
             if (settings == null) settings = CSVSettings.CSV;
 
-            // Retrieve reflection information
-            var filist = type.GetFields(BindingFlags);
-            var pilist = type.GetProperties();
-
             // Gather information about headers
             var headers = new List<object>();
-            foreach (var fi in filist)
+            while (type != null && type != typeof(System.Object))
             {
-                if (SerializationPolicy(fi))
-                    headers.Add(fi.Name);
+                // Retrieve reflection information
+                var filist = type.GetFields(BindingFlags);
+                var pilist = type.GetProperties();
+
+                foreach (var fi in filist)
+                {
+                    if (SerializationPolicy(fi))
+                        headers.Add(fi.Name);
+                }
+                foreach (var pi in pilist)
+                {
+                    if (SerializationPolicy(pi))
+                        headers.Add(pi.Name);
+                }
+                type = type.BaseType;
             }
-            foreach (var pi in pilist)
-            {
-                if (SerializationPolicy(pi))
-                    headers.Add(pi.Name);
-            }
+
             AppendCSVRow(sb, headers, settings);
         }
 
@@ -361,20 +366,23 @@ namespace CSVFile
 
             // Retrieve reflection information
             var type = typeof(T);
-            var filist = type.GetFields(BindingFlags);
-            var pilist = type.GetProperties();
-
             // Retrieve all the fields and properties
             List<object> values = new List<object>();
-            foreach (var fi in filist)
+            while (type != null && type != typeof(System.Object))
             {
-                if (SerializationPolicy(fi))
-                    values.Add(fi.GetValue(obj));
-            }
-            foreach (var pi in pilist)
-            {
-                if (SerializationPolicy(pi))
-                    values.Add(pi.GetValue(obj, null));
+                var filist = type.GetFields(BindingFlags);
+                var pilist = type.GetProperties();
+                foreach (var fi in filist)
+                {
+                    if (SerializationPolicy(fi))
+                        values.Add(fi.GetValue(obj));
+                }
+                foreach (var pi in pilist)
+                {
+                    if (SerializationPolicy(pi))
+                        values.Add(pi.GetValue(obj, null));
+                }
+                type = type.BaseType;
             }
 
             // Output one line of CSV
