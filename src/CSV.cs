@@ -558,6 +558,31 @@ namespace CSVFile
 
             }
         }
+        internal static PropertyInfo FindPropertyInfo(Type type, string name)
+        {
+            var members = GetMembers(type);
+            foreach (var item in members)
+            {
+                if (item is PropertyInfo && item.Name == name)
+                {
+                    return item as PropertyInfo;
+                }
+            }
+            return null;
+        }
+        internal static FieldInfo FindFieldInfo(Type type, string name)
+        {
+            var members = GetMembers(type);
+            foreach (var item in members)
+            {
+                if (item is FieldInfo && item.Name == name)
+                {
+                    return item as FieldInfo;
+                }
+            }
+            return null;
+        }
+        //--
     }
     //--add by swanky exporter/importer
     internal delegate string ExporterFunc(object obj);

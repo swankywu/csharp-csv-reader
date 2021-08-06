@@ -189,12 +189,12 @@ namespace CSVFile
             MethodInfo[] method_handlers = new MethodInfo[num_columns];
             for (int i = 0; i < num_columns; i++)
             {
-                prop_handlers[i] = return_type.GetProperty(Headers[i]);
+                prop_handlers[i] =  CSV.FindPropertyInfo(return_type, Headers[i]); //return_type.GetProperty(Headers[i]);
 
                 // If we failed to get a property handler, let's try a field handler
                 if (prop_handlers[i] == null)
                 {
-                    field_handlers[i] = return_type.GetField(Headers[i], CSV.BindingFlags);
+                    field_handlers[i] = CSV.FindFieldInfo(return_type, Headers[i]);//return_type.GetField(Headers[i], CSV.BindingFlags);
 
                     // If we failed to get a field handler, let's try a method
                     if (field_handlers[i] == null)
