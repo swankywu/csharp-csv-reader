@@ -442,9 +442,13 @@ namespace CSVFile
                         s = "(CAN NOT PARSE)";
                     }
                 }
-                else
+                else if (o is IConvertible)
                 {
                     s = o.ToString();
+                }
+                else
+                {
+                    s = settings.NullToken;
                 }
                 //--
                 // string s = o.ToString();
