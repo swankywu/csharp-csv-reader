@@ -442,7 +442,7 @@ namespace CSVFile
                         s = "(CAN NOT PARSE)";
                     }
                 }
-                else if (o is IConvertible)
+                else if (o is IConvertible || o is IFormattable)
                 {
                     s = o.ToString();
                 }
