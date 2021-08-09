@@ -481,6 +481,15 @@ namespace CSVFile
         internal static readonly
               IDictionary<Type, ExporterFunc> custom_exporters_table = new Dictionary<Type, ExporterFunc>();
 
+        private static readonly IDictionary<Type, ExporterFunc> base_exporters_table;
+        private static readonly IDictionary<Type, ImporterFunc> base_importers_table;
+        private static IFormatProvider datetime_format;
+
+        // internal static Func<object> BasicExporter;
+        // internal static Func<object, object> BasicImporter;
+        // internal static Func<object, bool> BasicExporterCondition;
+        // internal static Func<Type, bool> BasicImporterCondition;
+
         public static void RegisterExporter<T>(ExporterFunc<T> exporter)
         {
             ExporterFunc exporter_wrapper =
@@ -502,7 +511,47 @@ namespace CSVFile
                 };
 
             custom_importers_table.Add(typeof(TResult), importer_wrapper);
-        }//--
+        }
+        private static void RegisterBaseExporters()
+        {
+            datetime_format = System.Globalization.DateTimeFormatInfo.InvariantInfo;
+
+            base_exporters_table[typeof(byte)] =
+            base_exporters_table[typeof(float)] =
+            base_exporters_table[typeof(double)] =
+            base_exporters_table[typeof(int)] =
+            base_exporters_table[typeof(char)] =
+            base_exporters_table[typeof(decimal)] =
+            base_exporters_table[typeof(sbyte)] =
+            base_exporters_table[typeof(short)] =
+            base_exporters_table[typeof(ushort)] =
+            base_exporters_table[typeof(uint)] =
+            base_exporters_table[typeof(ulong)] = (o) => o.ToString();
+            base_exporters_table[typeof(DateTime)] = (o) => Convert.ToString((DateTime)o, datetime_format);
+
+            base_exporters_table[typeof(DateTimeOffset)] = (o) => ((DateTimeOffset)o).ToString("yyyy-MM-ddTHH:mm:ss.fffffffzzz", datetime_format);
+        }
+
+        private static void RegisterBaseImporters()
+        {
+            base_importers_table[typeof(byte)] =
+            base_importers_table[typeof(float)] =
+            base_importers_table[typeof(double)] =
+            base_importers_table[typeof(int)] =
+            base_importers_table[typeof(char)] =
+            base_importers_table[typeof(decimal)] =
+            base_importers_table[typeof(sbyte)] =
+            base_importers_table[typeof(short)] =
+            base_importers_table[typeof(ushort)] =
+            base_importers_table[typeof(uint)] =
+            base_importers_table[typeof(ulong)] = (i, t) => Convert.ChangeType(i, t);
+            base_importers_table[typeof(DateTime)] = (i, t) => DateTime.Parse(i);
+
+            base_importers_table[typeof(DateTimeOffset)] = (i, t) => DateTimeOffset.Parse(i, datetime_format);
+
+        }
+
+        //--
 
         //--added by swanky, start to type field cache
         private static Dictionary<Type, List<MemberInfo>> s_TypeData;
