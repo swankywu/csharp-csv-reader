@@ -169,13 +169,20 @@ namespace CSVFile
         }
 #endif
 
+        public List<T> Deserialize<T>() where T : class, new()
+        {
+            return (List<T>)Deserialize(typeof(T));
+        }
         /// <summary>
         /// Deserialize the CSV reader into a generic list
         /// </summary>
-        public List<T> Deserialize<T>() where T : class, new()
+        public IEnumerable Deserialize(Type return_type)
         {
-            List<T> result = new List<T>();
-            Type return_type = typeof(T);
+
+            var d0 = typeof(List<>);
+            System.Type[] typeArgs = { return_type };
+            System.Type constructed = d0.MakeGenericType(typeArgs);
+            object table = System.Activator.CreateInstance(constructed);
 
             // Read in the first line - we have to have headers!
             if (Headers == null) throw new Exception("CSV must have headers to be deserialized");
@@ -189,7 +196,7 @@ namespace CSVFile
             MethodInfo[] method_handlers = new MethodInfo[num_columns];
             for (int i = 0; i < num_columns; i++)
             {
-                prop_handlers[i] =  CSV.FindPropertyInfo(return_type, Headers[i]); //return_type.GetProperty(Headers[i]);
+                prop_handlers[i] = CSV.FindPropertyInfo(return_type, Headers[i]); //return_type.GetProperty(Headers[i]);
 
                 // If we failed to get a property handler, let's try a field handler
                 if (prop_handlers[i] == null)
@@ -254,13 +261,13 @@ namespace CSVFile
                 }
 
                 // Construct a new object and execute each column on it
-                T obj = new T();
+                var obj = Activator.CreateInstance(return_type);
                 for (int i = 0; i < Math.Min(line.Length, num_columns); i++)
                 {
 
                     // Attempt to convert this to the specified type
                     object value = null;
-                    if (_settings.AllowNull && (line[i] == null))
+                    if (_settings.AllowNull && (line[i] == null || line[i] == _settings.NullToken))
                     {
                         value = null;
                     }
@@ -307,12 +314,12 @@ namespace CSVFile
                 }
 
                 // Keep track of where we are in the file
-                result.Add(obj);
+                ((IList)table).Add(obj);
                 row_num++;
             }
 
             // Here's your array!
-            return result;
+            return table as IEnumerable;
         }
         #endregion
 

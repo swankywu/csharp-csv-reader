@@ -251,14 +251,18 @@ namespace CSVFile
         /// <param name="settings">The CSV settings to use when parsing the source (Default: CSV)</param>
         /// <param name="source">The source CSV to deserialize</param>
         /// <returns></returns>
-        public static List<T> Deserialize<T>(string source, CSVSettings settings = null) where T : class, new()
+        public static List<T> Deserialize<T>(string source, CSVSettings settings = null) where T : class
+        {
+            return (List<T>)Deserialize(source, typeof(T), settings);
+        }
+        public static IEnumerable Deserialize(string source, Type elementType, CSVSettings settings = null)
         {
             byte[] byteArray = Encoding.UTF8.GetBytes(source);
             using (var stream = new MemoryStream(byteArray))
             {
                 using (CSVReader cr = new CSVReader(new StreamReader(stream), settings))
                 {
-                    return cr.Deserialize<T>();
+                    return cr.Deserialize(elementType);
                 }
             }
         }
@@ -281,7 +285,7 @@ namespace CSVFile
 
         public static string Serialize<T>(IEnumerable<T> list, CSVSettings settings = null) where T : class, new()
         {
-            return SerializeAny(list, settings);
+            return Serialize(list, typeof(T), settings);
         }
         /// <summary>
         /// Serialize an array of objects to CSV format
@@ -290,7 +294,7 @@ namespace CSVFile
         /// <param name="list">The array of objects to serialize</param>
         /// <param name="settings">The CSV settings to use when exporting this array (Default: CSV)</param>
         /// <returns>The completed CSV string representing one line per element in list</returns>
-        public static string SerializeAny(IEnumerable list, CSVSettings settings = null)
+        public static string Serialize(IEnumerable list, Type elementType, CSVSettings settings = null)
         {
             // Use CSV as default.
             if (settings == null) settings = CSVSettings.CSV;
@@ -301,18 +305,22 @@ namespace CSVFile
             // Did the caller want the header row?
             if (settings.HeaderRowIncluded)
             {
-                sb.AppendCSVHeader(NBGame.Utility.Types.GetAnyElementType(list.GetType()), settings);
+                sb.AppendCSVHeader(elementType, settings);
                 sb.Append(settings.LineSeparator);
             }
 
             // Let's go through the array of objects
             // Iterate through all the objects
             // var values = new List<object>();
-            foreach (var obj in list)
+            if (list != null && list.GetEnumerator() != null)
             {
-                sb.AppendAsCSV(obj, settings);
-                sb.Append(settings.LineSeparator);
+                foreach (var obj in list)
+                {
+                    sb.AppendAsCSV(obj, settings);
+                    sb.Append(settings.LineSeparator);
+                }
             }
+
 
             // Here's your data serialized in CSV format
             return sb.ToString();
@@ -424,10 +432,10 @@ namespace CSVFile
                 }
                 else if (o is ICollection)
                 {
-                    var enumType = typeof(ICollection);
-                    if (custom_exporters_table.ContainsKey(enumType))
+                    var elementType = typeof(ICollection);
+                    if (custom_exporters_table.ContainsKey(elementType))
                     {
-                        s = custom_exporters_table[enumType](o);
+                        s = custom_exporters_table[elementType](o);
                     }
                     else
                     {
