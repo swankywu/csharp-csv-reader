@@ -193,7 +193,7 @@ namespace CSVFile
             TypeConverter[] column_convert = new TypeConverter[num_columns];
             PropertyInfo[] prop_handlers = new PropertyInfo[num_columns];
             FieldInfo[] field_handlers = new FieldInfo[num_columns];
-            MethodInfo[] method_handlers = new MethodInfo[num_columns];
+            // MethodInfo[] method_handlers = new MethodInfo[num_columns];
             for (int i = 0; i < num_columns; i++)
             {
                 prop_handlers[i] = CSV.FindPropertyInfo(return_type, Headers[i]); //return_type.GetProperty(Headers[i]);
@@ -208,22 +208,23 @@ namespace CSVFile
                     {
 
                         // Methods must be treated differently - we have to ensure that the method has a single parameter
-                        MethodInfo mi = return_type.GetMethod(Headers[i]);
-                        if (mi != null)
-                        {
-                            if (mi.GetParameters().Length == 1)
-                            {
-                                method_handlers[i] = mi;
-                                column_types[i] = mi.GetParameters()[0].ParameterType;
-                            }
-                            else if (!_settings.IgnoreHeaderErrors)
-                            {
-                                throw new Exception($"The column header '{Headers[i]}' matched a method with more than one parameter.");
-                            }
+                        // MethodInfo mi = return_type.GetMethod(Headers[i]);
+                        // if (mi != null)
+                        // {
+                        //     if (mi.GetParameters().Length == 1)
+                        //     {
+                        //         method_handlers[i] = mi;
+                        //         column_types[i] = mi.GetParameters()[0].ParameterType;
+                        //     }
+                        //     else if (!_settings.IgnoreHeaderErrors)
+                        //     {
+                        //         throw new Exception($"The column header '{Headers[i]}' matched a method with more than one parameter.");
+                        //     }
 
-                            // Does the caller want us to throw an error on bad columns?
-                        }
-                        else if (!_settings.IgnoreHeaderErrors)
+                        //     // Does the caller want us to throw an error on bad columns?
+                        // }
+                        // else 
+                        if (!_settings.IgnoreHeaderErrors)
                         {
                             throw new Exception($"The column header '{Headers[i]}' was not found in the class '{return_type.FullName}'.");
                         }
@@ -262,8 +263,14 @@ namespace CSVFile
 
                 // Construct a new object and execute each column on it
                 var obj = Activator.CreateInstance(return_type);
-                for (int i = 0; i < Math.Min(line.Length, num_columns); i++)
+                int colCount = Math.Min(line.Length, num_columns);
+                for (int i = 0; i < colCount; i++)
                 {
+                    if (prop_handlers[i] == null && field_handlers[i] == null)
+                    {
+                        //the filed or property is not found in the class ( maybe removed by)
+                        continue; //ignore this field
+                    }
 
                     // Attempt to convert this to the specified type
                     object value = null;
@@ -312,12 +319,18 @@ namespace CSVFile
 
                         // Can we set this value to the object as a property?
                     }
-                    else if (method_handlers[i] != null)
-                    {
-                        method_handlers[i].Invoke(obj, new object[] { value });
-                    }
+                    // else if (method_handlers[i] != null)
+                    // {
+                    //     method_handlers[i].Invoke(obj, new object[] { value });
+                    // }
                 }
 
+                //------ISerializationCallbackReceiver added by swanky
+                if (obj is UnityEngine.ISerializationCallbackReceiver callback)
+                {
+                    callback.OnAfterDeserialize();
+                }
+                //------
                 // Keep track of where we are in the file
                 ((IList)table).Add(obj);
                 row_num++;

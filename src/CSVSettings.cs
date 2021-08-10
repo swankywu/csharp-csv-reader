@@ -112,7 +112,8 @@ namespace CSVFile
         public static readonly CSVSettings CSV_PERMIT_NULL = new CSVSettings()
         {
             AllowNull = true,
-            NullToken = "NULL"
+            NullToken = "NULL",
+            IgnoreHeaderErrors = true
         };
 
         /// <summary>
