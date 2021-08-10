@@ -446,6 +446,11 @@ namespace CSVFile
                 {
                     s = o.ToString();
                 }
+                //
+                else if (UseBasic && BasicExporterCondition != null && BasicExporterCondition(o) && BasicExporter != null)
+                {
+                    s = BasicExporter(o);
+                }//--
                 else
                 {
                     s = settings.NullToken;
@@ -608,6 +613,15 @@ namespace CSVFile
             return null;
         }
         //--
+
+        //add basic class supports
+        public static bool UseBasic;
+        public static Func<object, string> BasicExporter;
+        public static Func<string, object> BasicImporter;
+        public static Func<object, bool> BasicExporterCondition;
+        public static Func<Type, bool> BasicImporterCondition;
+        //--
+
     }
     //--add by swanky exporter/importer
     internal delegate string ExporterFunc(object obj);

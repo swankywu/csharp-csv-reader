@@ -288,10 +288,15 @@ namespace CSVFile
                             value = CSV.custom_importers_table[typeColl](line[i], column_types[i]);
                         }
                     }
+                    else if (CSV.UseBasic && CSV.BasicImporterCondition != null && CSV.BasicImporterCondition(column_types[i]) && CSV.BasicImporter != null)
+                    {
+                        value = CSV.BasicImporter(line[i]);
+                    }
                     //--
                     else if (!_settings.IgnoreHeaderErrors)
                     {
-                        throw new Exception(String.Format("The value '{0}' cannot be converted to the type {1}.", line[i], column_types[i]));
+                        throw new Exception(String.Format("The value '{0}' cannot be converted to the type {1}({2}) while converting {3}, by converter: {4}."
+                            , line[i], column_types[i], Headers[i], return_type, column_convert[i]));
                     }
 
                     // Can we set this value to the object as a property?
