@@ -290,6 +290,10 @@ namespace CSVFile
                     {
                         value = CSV.BasicImporter(line[i]);
                     }
+                    else if (CSV.JsonImporter != null)
+                    {
+                        value = CSV.JsonImporter(line[i], column_types[i]);
+                    }
                     //--
                     else if (!_settings.IgnoreHeaderErrors)
                     {

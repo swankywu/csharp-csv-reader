@@ -445,7 +445,11 @@ namespace CSVFile
                 else if (UseBasic && BasicExporterCondition != null && BasicExporterCondition(o) && BasicExporter != null)
                 {
                     s = BasicExporter(o);
-                }//--
+                }
+                else if (JsonExporter != null)
+                {
+                    s = JsonExporter(o);
+                }
                 else
                 {
                     s = settings.NullToken;
@@ -652,6 +656,8 @@ namespace CSVFile
         public static bool UseBasic;
         public static Func<object, string> BasicExporter;
         public static Func<string, object> BasicImporter;
+        public static Func<object, string> JsonExporter;
+        public static Func<string, Type, object> JsonImporter;
         public static Func<object, bool> BasicExporterCondition;
         public static Func<Type, bool> BasicImporterCondition;
         //--
