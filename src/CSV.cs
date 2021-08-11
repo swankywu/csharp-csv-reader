@@ -376,6 +376,13 @@ namespace CSVFile
             // Use CSV as default.
             if (settings == null) settings = CSVSettings.CSV;
 
+            //---- ISerializationCallbackReceiver added by swanky
+            if (obj is UnityEngine.ISerializationCallbackReceiver callback)
+            {
+                callback.OnBeforeSerialize();
+            }
+            //---
+
             // Retrieve reflection information
             var type = obj.GetType();
             // Retrieve all the fields and properties
@@ -426,21 +433,9 @@ namespace CSVFile
                 //--add by swanky
                 var oType = o.GetType();
                 string s;
-                if (custom_exporters_table.ContainsKey(oType))
+                if (HasAssignableType(custom_exporters_table, oType, out var realKey))
                 {
-                    s = custom_exporters_table[oType](o);
-                }
-                else if (o is ICollection)
-                {
-                    var elementType = typeof(ICollection);
-                    if (custom_exporters_table.ContainsKey(elementType))
-                    {
-                        s = custom_exporters_table[elementType](o);
-                    }
-                    else
-                    {
-                        s = "(CAN NOT PARSE)";
-                    }
+                    s = custom_exporters_table[realKey](o);
                 }
                 else if (o is IConvertible || o is IFormattable)
                 {
@@ -490,6 +485,45 @@ namespace CSVFile
         internal static readonly
               IDictionary<Type, ExporterFunc> custom_exporters_table = new Dictionary<Type, ExporterFunc>();
 
+        internal static bool HasAssignableType(IDictionary<Type, ImporterFunc> dic, Type type, out Type realKey)
+        {
+            if (dic.ContainsKey(type))
+            {
+                realKey = type;
+                return true;
+            }
+            var types = dic.Keys;
+            foreach (var key in types)
+            {
+                if (key.IsAssignableFrom(type))
+                {
+                    realKey = key;
+                    return true;
+                }
+            }
+            realKey = null;
+            return false;
+        }
+
+        internal static bool HasAssignableType(IDictionary<Type, ExporterFunc> dic, Type type, out Type realKey)
+        {
+            if (dic.ContainsKey(type))
+            {
+                realKey = type;
+                return true;
+            }
+            var types = dic.Keys;
+            foreach (var key in types)
+            {
+                if (key.IsAssignableFrom(type))
+                {
+                    realKey = key;
+                    return true;
+                }
+            }
+            realKey = null;
+            return false;
+        }
 
         public static void RegisterExporter<T>(ExporterFunc<T> exporter)
         {

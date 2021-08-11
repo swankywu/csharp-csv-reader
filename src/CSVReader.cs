@@ -278,22 +278,13 @@ namespace CSVFile
                     {
                         value = null;
                     }
-                    else if (CSV.custom_importers_table.ContainsKey(column_types[i])) //--add by swanky, use custom importer
+                    else if (CSV.HasAssignableType(CSV.custom_importers_table, column_types[i], out var realKey)) //--add by swanky, use custom importer
                     {
-                        value = CSV.custom_importers_table[column_types[i]](line[i], column_types[i]);
+                        value = CSV.custom_importers_table[realKey](line[i], column_types[i]);
                     }
                     else if (column_convert[i] != null && column_convert[i].IsValid(line[i]))
                     {
                         value = column_convert[i].ConvertFromString(line[i]);
-                    }
-                    //--add by swanky
-                    else if (typeof(ICollection).IsAssignableFrom(column_types[i]))
-                    {
-                        var typeColl = typeof(ICollection);
-                        if (CSV.custom_importers_table.ContainsKey(typeColl))
-                        {
-                            value = CSV.custom_importers_table[typeColl](line[i], column_types[i]);
-                        }
                     }
                     else if (CSV.UseBasic && CSV.BasicImporterCondition != null && CSV.BasicImporterCondition(column_types[i]) && CSV.BasicImporter != null)
                     {
