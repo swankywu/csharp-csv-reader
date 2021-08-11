@@ -40,7 +40,7 @@ namespace CSVTestSuite
         {
             // Deserialize an array to a list of objects!
             List<TestClassOne> list = null;
-            string source = @"timestamp,TestString,SetComment,PropertyString,IntField,IntProperty
+            string source = @"timestamp,TestString,Comment,PropertyString,IntField,IntProperty
 2012-05-01,test1,""Hi there, I said!"",Bob,57,0
 2011-04-01,test2,""What's up, buttercup?"",Ralph,1,-999
 1975-06-03,test3,""Bye and bye, dragonfly!"",Jimmy's The Bomb,12,13";
