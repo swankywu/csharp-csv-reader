@@ -310,7 +310,16 @@ namespace CSVFile
                     }
                     else if (field_handlers[i] != null)
                     {
-                        field_handlers[i].SetValue(obj, value);
+                        //Unity override `==` between UnityEngine.Object and null, so we may get an non-null System.Object but it does be a null UnityEngine.Object
+                        //this may cause type error while the UnityEngine.Object is null, we check it here to prevent possible errors
+                        if (value is UnityEngine.Object uValue && uValue == null)
+                        {
+                            field_handlers[i].SetValue(obj, null);
+                        }
+                        else
+                        {
+                            field_handlers[i].SetValue(obj, value);
+                        }
 
                         // Can we set this value to the object as a property?
                     }
